@@ -6,10 +6,13 @@ dist-ssr/
 *.local
 
 # 🔒 Documentos internos e de clientes — NÃO versionar (troca interna do time)
-docs/
+/docs/
 
-# Skills locais (não fazem parte do produto)
-skills/
+# Pasta stray de skills na RAIZ (não confundir com .claude/skills, que É versionado)
+/skills/
+
+# Config local do Claude (segredos/permissões da máquina) — o resto de .claude/ é versionado
+.claude/settings.local.json
 
 # Logs
 npm-debug.log*
