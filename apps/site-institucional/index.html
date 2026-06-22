@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Tema (anti-FOUC): padrão CLARO; só ativa o escuro se o usuário escolheu -->
+    <script>
+      (function () {
+        try {
+          if (localStorage.getItem("oc-theme") === "dark") {
+            document.documentElement.classList.add("dark");
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Office Collection — Moda Profissional | Uniformes Corporativos Premium</title>
+    <meta
+      name="description"
+      content="Office Collection — quase 50 anos criando uniformes corporativos sob medida para saúde, hotelaria, aviação e ambientes sociais. Cada detalhe é importante para dar valor à sua marca."
+    />
+
+    <!-- Fontes: Cormorant Garamond (serif display) · Parisienne (script) · Jost (corpo) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Jost:wght@300;400;500;600;700&family=Parisienne&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

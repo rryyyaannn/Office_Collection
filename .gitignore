@@ -1,0 +1,30 @@
+# Dependências, build e Vercel (em qualquer app)
+node_modules/
+dist/
+dist-ssr/
+.vercel/
+*.local
+
+# 🔒 Documentos internos e de clientes — NÃO versionar (troca interna do time)
+docs/
+
+# Skills locais (não fazem parte do produto)
+skills/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+Thumbs.db
+
+# Ambiente
+.env
+.env.*
+!.env.example

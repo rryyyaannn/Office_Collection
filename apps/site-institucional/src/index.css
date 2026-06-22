@@ -1,0 +1,172 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Office Collection — tokens e temas (claro / escuro)
+   Cada cor é um trio RGB (espaços) para suportar /opacidade no Tailwind.
+   ============================================================ */
+:root {
+  color-scheme: light;
+  --c-wine: 112 31 32;
+  --c-wine-deep: 90 24 25;
+  --c-wine-soft: 142 58 59;
+  --c-wine-tint: 243 233 229;
+  --c-ink: 38 35 35;
+  --c-ink-soft: 74 70 68;
+  --c-navy: 45 47 146;
+  --c-navy-soft: 74 76 176;
+  --c-cream: 250 249 245;
+  --c-surface: 255 255 255;
+  --c-graphite: 38 35 35;
+  --c-stone: 149 149 149;
+  --c-line: 231 226 218;
+  --c-footer-bg: 28 26 26;
+  --c-footer-text: 201 195 188;
+  --c-footer-line: 51 48 46;
+
+  --grain: 38 35 35;
+  --scroll-thumb: 216 209 199;
+  --page-width: 1600px;
+  --header-h: 116px;
+}
+
+/* === Tema escuro premium === */
+html.dark {
+  color-scheme: dark;
+  --c-wine: 196 110 98; /* bordô iluminado, legível no escuro */
+  --c-wine-deep: 172 86 74;
+  --c-wine-soft: 214 150 138;
+  --c-wine-tint: 40 24 22;
+  --c-ink: 242 236 228; /* texto claro */
+  --c-ink-soft: 184 176 166;
+  --c-navy: 130 132 224; /* marinho iluminado */
+  --c-navy-soft: 150 152 230;
+  --c-cream: 20 17 16; /* fundo da página */
+  --c-surface: 29 25 22; /* cards/seções */
+  --c-graphite: 38 35 35; /* superfície escura fixa */
+  --c-stone: 138 131 123;
+  --c-line: 47 41 37;
+  --c-footer-bg: 15 13 12;
+  --c-footer-text: 184 176 166;
+  --c-footer-line: 42 38 35;
+
+  --grain: 255 255 255;
+  --scroll-thumb: 60 53 48;
+}
+
+/* transição suave ao alternar tema */
+html.theme-anim,
+html.theme-anim * {
+  transition: background-color 0.35s ease, border-color 0.35s ease, color 0.35s ease;
+}
+
+@layer base {
+  * {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-cream text-ink font-body;
+    font-size: 15.5px;
+    line-height: 1.62;
+    font-weight: 400;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-serif text-ink;
+    font-weight: 500;
+  }
+
+  /* seleção de texto na cor da marca */
+  ::selection {
+    background: rgb(var(--c-wine));
+    color: #fff;
+  }
+
+  /* faixa de scrollbar discreta */
+  ::-webkit-scrollbar {
+    width: 11px;
+  }
+  ::-webkit-scrollbar-track {
+    background: rgb(var(--c-cream));
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--scroll-thumb));
+    border: 3px solid rgb(var(--c-cream));
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--c-wine));
+  }
+}
+
+@layer components {
+  /* Wrapper de conteúdo com recuo lateral fluido */
+  .container-page {
+    @apply mx-auto w-full max-w-page;
+    padding-inline: clamp(1.25rem, 5vw, 5rem);
+  }
+  .container-content {
+    @apply mx-auto w-full max-w-content;
+    padding-inline: clamp(1.25rem, 5vw, 5rem);
+  }
+
+  /* Microlabel em caixa-alta — subtítulo do padrão script+caps */
+  .eyebrow {
+    @apply font-body uppercase text-[11px] font-semibold tracking-label text-stone;
+  }
+
+  /* Linha decorativa fina ao lado de títulos */
+  .rule {
+    @apply inline-block h-px w-12 bg-wine align-middle;
+  }
+}
+
+@layer utilities {
+  /* Textura de papel sutil — adapta ao tema via --grain */
+  .bg-grain {
+    background-image: radial-gradient(
+      rgb(var(--grain) / 0.04) 1px,
+      transparent 1px
+    );
+    background-size: 4px 4px;
+  }
+
+  /* Pausa o marquee ao passar o mouse */
+  .marquee-track:hover {
+    animation-play-state: paused;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Esconde a barra de rolagem (carrossel de produtos) mantendo o scroll */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Respeita usuários que preferem menos movimento */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
