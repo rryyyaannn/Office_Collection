@@ -31,3 +31,6 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Workspace do Claude — local apenas (decisão: não versionar)
+.claude/
