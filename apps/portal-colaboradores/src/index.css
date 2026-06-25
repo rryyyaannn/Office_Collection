@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-cream text-ink font-body;
+    font-size: 14.5px;
+  }
+  h1, h2, h3 { @apply font-serif text-ink; }
+}
+
+@layer components {
+  .card { @apply border border-line bg-white; }
+  .label { @apply block font-body text-[11px] font-semibold uppercase tracking-[0.12em] text-stone; }
+  .input {
+    @apply h-10 w-full border border-line bg-white px-3 text-[14px] text-ink outline-none transition-colors;
+  }
+  .input:focus { @apply border-wine; }
+  .pill {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide;
+  }
+}
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+}

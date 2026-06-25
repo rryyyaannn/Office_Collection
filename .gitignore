@@ -32,5 +32,8 @@ Thumbs.db
 .env.*
 !.env.example
 
+# 🔒 Supabase — NÃO versionar (decisão do Ryan): migrations/seed/functions + segredos ficam locais
+/supabase/
+
 # Workspace do Claude — local apenas (decisão: não versionar)
 .claude/
