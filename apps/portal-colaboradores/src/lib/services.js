@@ -1,7 +1,7 @@
 // Camada de serviços (ports & adapters). Hoje: implementação MOCK sobre a store.
 // Pontos de acoplamento futuros marcados com [ACOPLAR].
 import { getState, setState, uid } from "./store";
-import { normCPF, matchPosition, bordadoNome } from "./normalize";
+import { normCPF, matchPosition, bordadoNome, normCargoText } from "./normalize";
 import { enderecoLinha } from "./validators";
 import { supabaseEnabled } from "./supabase";
 import * as db from "./db";
@@ -107,9 +107,44 @@ export const orderService = {
         `Seu pedido ${o.numero} foi entregue. 💜 Obrigado! Responda a pesquisa de satisfação quando puder.`);
     return o;
   },
+  // volta um passo no fluxo (correção). Limpa rastreio se sair de "despachado".
+  revert(orderId) {
+    if (supabaseEnabled) return db.orderRevert(orderId);
+    const seq = ["recebido", "em_separacao", "despachado", "entregue"];
+    setState((s) => ({
+      ...s,
+      orders: s.orders.map((o) => {
+        if (o.id !== orderId) return o;
+        const prev = seq[Math.max(seq.indexOf(o.status) - 1, 0)];
+        const upd = { ...o, status: prev };
+        if (o.status === "despachado") upd.rastreio = undefined;
+        return upd;
+      }),
+    }));
+  },
   // bloqueio de re-pedido: já existe pedido não-cancelado para o colaborador?
   jaPediu(profileId) {
     return getState().orders.some((o) => o.profileId === profileId && o.status !== "cancelado");
+  },
+};
+
+// ---------- CARGOS (palavras-chave → cargo canônico) ----------
+export const cargoService = {
+  addAlias(texto, positionCode) {
+    if (supabaseEnabled) return db.addAlias(texto, positionCode);
+    setState((s) => ({ ...s, aliases: [...(s.aliases || []), { id: uid("a_"), alias_norm: normCargoText(texto), position: positionCode }] }));
+  },
+  removeAlias(id) {
+    if (supabaseEnabled) return db.removeAlias(id);
+    setState((s) => ({ ...s, aliases: (s.aliases || []).filter((a) => a.id !== id) }));
+  },
+};
+
+// ---------- CONFIG (preços/frete editáveis à mão) ----------
+export const configService = {
+  save(patch) {
+    if (supabaseEnabled) return db.saveConfig(patch);
+    setState((s) => ({ ...s, config: { ...s.config, ...patch } }));
   },
 };
 
@@ -142,12 +177,16 @@ export const erpService = {
     const ufFat = u?.uf || "SP"; // UF de faturamento (cliente do contrato)
     const cliente = ufFat === "GO" ? TENANT.config.cliente_go : TENANT.config.cliente_sp;
     const frete = ufFat === "SP" ? `R$ ${TENANT.config.frete_contrato_sp},00 (contrato)` : "frete real";
-    const end = profile.endereco; // entrega é na casa do colaborador (Correios)
+    const naUnidade = order.entregaTipo === "unidade";
+    const end = profile.endereco; // entrega padrão: casa do colaborador (Correios)
+    const enderecoEntrega = naUnidade ? `Retirada na ${u?.nome || order.unidade || "unidade"}` : (end ? enderecoLinha(end) : "");
+    const cidadeUf = naUnidade ? `${(u?.nome || "").replace("Unidade ", "")} / ${u?.uf || ""}` : (end ? `${end.cidade} / ${end.uf}` : "");
     return order.items.map((it) => ({
       DATA: order.createdAt.slice(0, 10),
       DESTINATARIO: profile.nome,
-      ENDERECO: end ? enderecoLinha(end) : "",
-      "CIDADE/UF": end ? `${end.cidade} / ${end.uf}` : "",
+      ENTREGA: naUnidade ? "Unidade Einstein" : "Casa (Correios)",
+      ENDERECO: enderecoEntrega,
+      "CIDADE/UF": cidadeUf,
       UNIDADE: u?.nome || order.unidade || "",
       PO: order.po || "",
       KIT: kit?.nome || "",
@@ -159,7 +198,7 @@ export const erpService = {
       BORDADO: it.bordadoNome || "",
       STATUS: order.status,
       OBJETO: order.rastreio || "",
-      UF: end?.uf || ufFat,
+      UF: naUnidade ? (u?.uf || ufFat) : (end?.uf || ufFat),
       CLIENTE: cliente,
       FRETE: frete,
     }));

@@ -15,6 +15,7 @@ import Colaboradores from "./pages/admin/Colaboradores";
 import CargosKits from "./pages/admin/CargosKits";
 import Pedidos from "./pages/admin/Pedidos";
 import PedidoFicha from "./pages/admin/PedidoFicha";
+import Faturamento from "./pages/admin/Faturamento";
 
 function RequireRole({ role, children }) {
   const session = useStore((s) => s.session);
@@ -56,6 +57,7 @@ export default function App() {
         <Route path="/admin/cargos" element={<CargosKits />} />
         <Route path="/admin/pedidos" element={<Pedidos />} />
         <Route path="/admin/pedido/:id" element={<PedidoFicha />} />
+        <Route path="/admin/faturamento" element={<Faturamento />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

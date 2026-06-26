@@ -1,7 +1,7 @@
 // Store mock reativa (localStorage). Troca por Supabase depois (VITE_DATA_SOURCE).
 import { useSyncExternalStore } from "react";
-import { COLABORADORES_SEED, POSITIONS } from "../data/seed";
-import { matchPosition } from "./normalize";
+import { COLABORADORES_SEED, POSITIONS, ALIASES, DEFAULT_CONFIG } from "../data/seed";
+import { matchPosition, normCargoText } from "./normalize";
 
 const KEY = "oc-portal-state-v2"; // v2: status liberado/aguardando, endereço, login e-mail/CPF
 const codeByPos = Object.fromEntries(POSITIONS.map((p) => [p.codigo, p]));
@@ -24,12 +24,18 @@ function seedProfiles() {
   }));
 }
 
+function seedAliases() {
+  return Object.entries(ALIASES).map(([alias_norm, position], i) => ({ id: "a_seed_" + i, alias_norm, position }));
+}
+function freshState() {
+  return { profiles: seedProfiles(), orders: [], imports: [], notifications: [], session: null, aliases: seedAliases(), config: DEFAULT_CONFIG };
+}
 function initialState() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) return { ...freshState(), ...JSON.parse(raw) };
   } catch { /* ignore */ }
-  return { profiles: seedProfiles(), orders: [], imports: [], notifications: [], session: null };
+  return freshState();
 }
 
 let state = initialState();
@@ -53,7 +59,7 @@ export function useStore(selector = (s) => s) {
 }
 
 export function resetStore() {
-  state = { profiles: seedProfiles(), orders: [], imports: [], notifications: [], session: null };
+  state = freshState();
   persist();
   listeners.forEach((l) => l());
 }

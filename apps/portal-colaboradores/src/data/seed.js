@@ -104,6 +104,22 @@ for (const p of PRODUCTS) {
   for (const t of p.tamanhos) STOCK[p.id][t] = ["50", "XG", "GG"].includes(t) ? 0 : 120;
 }
 
+// Preços por peça (R$) — extraídos da planilha "Einstein 2026 v2" (aba Auxiliar).
+// SÃO DEFAULTS: a Office edita tudo à mão no Painel ADM (Faturamento).
+export const PRECOS = {
+  camf: 129.92, camm: 126.56, calf: 129.92, calm: 144.48,
+  jcm: 148.96, jcf: 137.76, jgm: 143.36, jgf: 143.36,
+  jgab: 143.36, jlab: 104.16, scrb: 95.0, scrc: 95.0,
+};
+
+// Config editável do tenant (defaults). Persistida em identidade.tenants.config (DB) no modo supabase.
+export const DEFAULT_CONFIG = {
+  precos: PRECOS,
+  frete_contrato_sp: 40,   // SP: R$40 por pedido (contrato)
+  cliente_sp: "027298",
+  cliente_go: "030262",
+};
+
 // colaboradores pré-cadastrados (atalho de demo; também dá pra importar).
 // status: "liberado" (1º acesso disponível) | "aguardando" (Office ainda não liberou).
 // 1 conta já PRÉ-ATIVADA p/ testar login direto; as demais demonstram 1º acesso e o gate.

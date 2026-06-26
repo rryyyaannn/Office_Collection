@@ -3,8 +3,8 @@
 // para não reescrever a UI. Catálogo segue estático (seed.js). RLS isola por sessão.
 import { supabase } from "./supabase";
 import { setState, getState, uid } from "./store";
-import { KITS, POSITIONS, productById, STOCK } from "../data/seed";
-import { bordadoNome } from "./normalize";
+import { KITS, POSITIONS, productById, STOCK, DEFAULT_CONFIG } from "../data/seed";
+import { bordadoNome, normCargoText } from "./normalize";
 
 const posByCode = Object.fromEntries(POSITIONS.map((p) => [p.codigo, p]));
 const ID = (s) => s; // schema helpers
@@ -49,11 +49,13 @@ export async function bootstrap() {
 }
 
 async function loadStaff(tenantId) {
-  const [{ data: profs }, { data: orders }, { data: imps }, { data: notifs }] = await Promise.all([
+  const [{ data: profs }, { data: orders }, { data: imps }, { data: notifs }, { data: aliasRows }, { data: tenant }] = await Promise.all([
     ident().from("profiles").select("*, positions(codigo)").order("created_at"),
     ped().from("orders").select("*, order_items(*)").order("created_at", { ascending: false }),
     integ().from("imports").select("*, import_rows(*)").order("created_at", { ascending: false }),
     integ().from("notifications").select("*").order("created_at", { ascending: false }),
+    ident().from("cargo_aliases").select("id, alias_norm, positions(codigo)").order("alias_norm"),
+    ident().from("tenants").select("config").eq("id", tenantId).single(),
   ]);
   setState((s) => ({
     ...s,
@@ -65,6 +67,8 @@ async function loadStaff(tenantId) {
       rows: (i.import_rows || []).map((r) => ({ raw: r.raw, status: r.status, motivo: r.motivo, cargo: null })),
     })),
     notifications: (notifs || []).map(mapNotif),
+    aliases: (aliasRows || []).map((a) => ({ id: a.id, alias_norm: a.alias_norm, position: a.positions?.codigo })),
+    config: { ...DEFAULT_CONFIG, ...(tenant?.config || {}) },
   }));
 }
 
@@ -166,6 +170,15 @@ export async function orderAdvance(orderId, rastreioInformado) {
   await bootstrap();
 }
 
+export async function orderRevert(orderId) {
+  const cur = getState().orders.find((o) => o.id === orderId);
+  const prev = SEQ[Math.max(SEQ.indexOf(cur.status) - 1, 0)];
+  const patch = { status: prev };
+  if (cur.status === "despachado") patch.rastreio = null; // saiu do despacho → limpa rastreio
+  await ped().from("orders").update(patch).eq("id", orderId);
+  await bootstrap();
+}
+
 export async function liberar(profileId) {
   await ident().from("profiles").update({ status: "liberado" }).eq("id", profileId);
   await bootstrap();
@@ -187,6 +200,27 @@ export async function updateConta(profileId, patch) {
   if (patch.endereco) upd.endereco = patch.endereco;
   if (Object.keys(upd).length) await ident().from("profiles").update(upd).eq("id", profileId);
   await bootstrap();
+}
+
+// ---------- CARGOS (aliases) ----------
+export async function addAlias(texto, positionCode) {
+  const tenantId = getState().session.tenantId;
+  const { data: pos } = await ident().from("positions").select("id").eq("tenant_id", tenantId).eq("codigo", positionCode).single();
+  if (!pos) throw new Error("cargo inválido");
+  await ident().from("cargo_aliases").insert({ tenant_id: tenantId, alias_norm: normCargoText(texto), position_id: pos.id });
+  await bootstrap();
+}
+export async function removeAlias(id) {
+  await ident().from("cargo_aliases").delete().eq("id", id);
+  await bootstrap();
+}
+
+// ---------- CONFIG (preços/frete editáveis) ----------
+export async function saveConfig(patch) {
+  const st = getState();
+  const merged = { ...st.config, ...patch };
+  await ident().from("tenants").update({ config: merged }).eq("id", st.session.tenantId);
+  setState((s) => ({ ...s, config: merged }));
 }
 
 // pedido já existe? (bloqueio de re-pedido)

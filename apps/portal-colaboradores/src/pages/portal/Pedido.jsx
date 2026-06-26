@@ -1,23 +1,28 @@
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { Minus, Plus } from "lucide-react";
-import { Button, Card, Field, PageTitle } from "../../components/ui";
+import { Minus, Plus, Home, Building2 } from "lucide-react";
+import { Button, Card, Field, PageTitle, Modal, StatusPill } from "../../components/ui";
 import { currentProfile } from "../../lib/auth";
 import { orderService } from "../../lib/services";
 import { POSITIONS, KITS, productById, STOCK, UNIDADES, BORDADO_INFO } from "../../data/seed";
 import { bordadoNome } from "../../lib/normalize";
+import { enderecoLinha } from "../../lib/validators";
 
 const posByCode = Object.fromEntries(POSITIONS.map((p) => [p.codigo, p]));
+const unidadeNome = Object.fromEntries(UNIDADES.map((u) => [u.codigo, `${u.nome} (${u.uf})`]));
 const MODEL = [["todas", "Todas"], ["fem", "Feminina"], ["masc", "Masculina"], ["uni", "Unissex"]];
 
 export default function Pedido() {
   const nav = useNavigate();
   const profile = currentProfile();
   const kit = KITS[posByCode[profile.position]?.kit];
-  const [form, setForm] = useState({}); // single: {i:{productId,tamanho}} | multi: {i:{picks:{pid:{qtd,tamanho}}}}
+  const [form, setForm] = useState({});
+  const [entregaTipo, setEntregaTipo] = useState("casa"); // casa | unidade
   const [unidade, setUnidade] = useState(profile.unidade || "AEMO");
   const [filtro, setFiltro] = useState("todas");
   const [erro, setErro] = useState("");
+  const [review, setReview] = useState(null); // resumo p/ confirmação
+  const [busy, setBusy] = useState(false);
 
   if (!kit) return <Navigate to="/portal" replace />;
   if (orderService.jaPediu(profile.id)) return <Navigate to="/portal/meus-pedidos" replace />;
@@ -25,17 +30,17 @@ export default function Pedido() {
   const slots = kit.slots.map((s) => ({ ...s, produtos: s.produtos.map((id) => productById[id]) }));
   const temFiltro = slots.some((s) => new Set(s.produtos.map((p) => p.genero)).size > 1);
   const aplicaFiltro = (ps) => (filtro === "todas" ? ps : ps.filter((p) => p.genero === filtro));
-
   const setSingle = (i, patch) => setForm((f) => ({ ...f, [i]: { ...f[i], ...patch } }));
   const setPick = (i, pid, patch) =>
     setForm((f) => ({ ...f, [i]: { picks: { ...(f[i]?.picks || {}), [pid]: { ...(f[i]?.picks?.[pid] || { qtd: 0, tamanho: "" }), ...patch } } } }));
 
-  async function submit() {
+  // valida + monta os itens; abre a tela de confirmação
+  function revisar() {
     setErro("");
+    if (entregaTipo === "casa" && !profile.endereco) return setErro("Cadastre um endereço em “Minha conta” ou escolha uma unidade.");
     const items = [];
     for (let i = 0; i < slots.length; i++) {
-      const slot = slots[i];
-      const v = form[i] || {};
+      const slot = slots[i]; const v = form[i] || {};
       if (slot.modo === "multi") {
         const picks = v.picks || {};
         const total = Object.values(picks).reduce((a, p) => a + (p.qtd || 0), 0);
@@ -52,14 +57,27 @@ export default function Pedido() {
         items.push({ productId: v.productId, tamanho: v.tamanho, qtd: 1 });
       }
     }
-    setErro("…enviando seu pedido");
+    const preview = items.map((it) => ({
+      ...it, nome: productById[it.productId]?.nome,
+      sobMedida: (STOCK[it.productId]?.[it.tamanho] ?? 0) < it.qtd,
+      bordado: kit.bordado ? bordadoNome(profile.nome) : null,
+    }));
+    setReview({ items, preview });
+  }
+
+  async function confirmar() {
+    setBusy(true);
     try {
-      const order = await orderService.create({ profileId: profile.id, unidade, items });
+      const order = await orderService.create({ profileId: profile.id, unidade, items: review.items, entregaTipo });
       nav("/portal/meus-pedidos", { state: { novo: order.numero } });
     } catch {
-      setErro("Não foi possível registrar o pedido. Tente novamente.");
+      setBusy(false); setReview(null); setErro("Não foi possível registrar o pedido. Tente novamente.");
     }
   }
+
+  const destinoTexto = entregaTipo === "casa"
+    ? (profile.endereco ? enderecoLinha(profile.endereco) : "—")
+    : (unidadeNome[unidade] || unidade);
 
   return (
     <div>
@@ -82,37 +100,82 @@ export default function Pedido() {
       <div className="grid gap-5 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           {slots.map((slot, i) =>
-            slot.modo === "multi" ? (
-              <SlotMulti key={i} slot={slot} value={form[i]} filtroFn={aplicaFiltro} onPick={(pid, patch) => setPick(i, pid, patch)} />
-            ) : (
-              <SlotSingle key={i} slot={slot} value={form[i] || {}} filtroFn={aplicaFiltro} onChange={(patch) => setSingle(i, patch)} />
-            )
+            slot.modo === "multi"
+              ? <SlotMulti key={i} slot={slot} value={form[i]} filtroFn={aplicaFiltro} onPick={(pid, patch) => setPick(i, pid, patch)} />
+              : <SlotSingle key={i} slot={slot} value={form[i] || {}} filtroFn={aplicaFiltro} onChange={(patch) => setSingle(i, patch)} />
           )}
         </div>
 
         <div className="space-y-4">
           <Card>
             <h3 className="mb-3 font-serif text-lg font-semibold">Entrega</h3>
-            <p className="mb-2 text-[12px] text-stone">Enviamos para o seu endereço cadastrado. A unidade abaixo é só referência do hospital.</p>
-            <Field label="Unidade (referência)">
-              <select className="input" value={unidade} onChange={(e) => setUnidade(e.target.value)}>
-                {UNIDADES.map((u) => <option key={u.codigo} value={u.codigo}>{u.nome} ({u.uf})</option>)}
-              </select>
-            </Field>
+            <div className="space-y-2">
+              <DestinoOpcao ativo={entregaTipo === "casa"} onClick={() => setEntregaTipo("casa")} icon={Home}
+                titulo="Meu endereço (recomendado)" sub={profile.endereco ? enderecoLinha(profile.endereco) : "nenhum endereço cadastrado"} />
+              <DestinoOpcao ativo={entregaTipo === "unidade"} onClick={() => setEntregaTipo("unidade")} icon={Building2}
+                titulo="Retirar em uma unidade Einstein" sub="entrega na unidade do hospital">
+                {entregaTipo === "unidade" && (
+                  <select className="input mt-2" value={unidade} onChange={(e) => setUnidade(e.target.value)} onClick={(e) => e.stopPropagation()}>
+                    {UNIDADES.map((u) => <option key={u.codigo} value={u.codigo}>{u.nome} ({u.uf})</option>)}
+                  </select>
+                )}
+              </DestinoOpcao>
+              {entregaTipo === "casa" && (
+                <p className="text-[11px] text-stone">Endereço errado? Ajuste em <a href="/portal/conta" className="text-wine underline">Minha conta</a> antes de pedir.</p>
+              )}
+            </div>
           </Card>
 
           {kit.bordado && (
             <Card>
               <h3 className="mb-2 font-serif text-lg font-semibold">Bordado do nome</h3>
-              <p className="rounded border border-line bg-cream px-3 py-2 text-center text-[16px] font-medium tracking-wide">
-                {bordadoNome(profile.nome)}
-              </p>
+              <p className="rounded border border-line bg-cream px-3 py-2 text-center text-[16px] font-medium tracking-wide">{bordadoNome(profile.nome)}</p>
               <p className="mt-2 text-[11px] leading-relaxed text-stone">{BORDADO_INFO}</p>
             </Card>
           )}
 
           {erro && <p className="rounded border border-wine/30 bg-wine/5 px-3 py-2 text-[13px] text-wine">{erro}</p>}
-          <Button className="w-full" onClick={submit}>Finalizar pedido</Button>
+          <Button className="w-full" onClick={revisar}>Revisar pedido</Button>
+        </div>
+      </div>
+
+      {/* Confirmação (poka-yoke: confere tudo antes de enviar) */}
+      <Modal open={!!review} title="Confirme seu pedido" onClose={() => setReview(null)} onConfirm={confirmar} confirmLabel="Confirmar pedido" busy={busy}>
+        {review && (
+          <div className="space-y-3 text-[13px]">
+            <ul className="divide-y divide-line border-y border-line">
+              {review.preview.map((it, i) => (
+                <li key={i} className="flex items-center justify-between py-2">
+                  <span>{it.nome} · <strong>tam {it.tamanho}</strong> · {it.qtd}x</span>
+                  <span className="text-[11px] text-stone">{it.sobMedida ? "sob medida" : "pronta entrega"}</span>
+                </li>
+              ))}
+            </ul>
+            {review.preview[0]?.bordado && <p>Bordado: <strong>{review.preview[0].bordado}</strong></p>}
+            <div>
+              <p className="text-[10px] uppercase tracking-wide text-stone">Entrega</p>
+              <p className="font-medium text-ink">{destinoTexto}</p>
+            </div>
+            <p className="text-[11px] text-stone">Confira tudo — após confirmar, alterações são feitas com a Office pelo WhatsApp.</p>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}
+
+function DestinoOpcao({ ativo, onClick, icon: Icon, titulo, sub, children }) {
+  return (
+    <div onClick={onClick} className={`cursor-pointer rounded border p-3 transition ${ativo ? "border-wine bg-wine/5 ring-1 ring-wine" : "border-line hover:border-ink/40"}`}>
+      <div className="flex items-start gap-2">
+        <span className={`mt-0.5 grid h-4 w-4 place-items-center rounded-full border ${ativo ? "border-wine" : "border-stone"}`}>
+          {ativo && <span className="h-2 w-2 rounded-full bg-wine" />}
+        </span>
+        <Icon size={16} className="mt-0.5 text-ink-soft" />
+        <div className="flex-1">
+          <p className="text-[13px] font-medium text-ink">{titulo}</p>
+          <p className="text-[11px] text-stone">{sub}</p>
+          {children}
         </div>
       </div>
     </div>
@@ -121,10 +184,7 @@ export default function Pedido() {
 
 function PieceCard({ product, selected, onClick, children }) {
   return (
-    <div
-      onClick={onClick}
-      className={`cursor-pointer rounded border p-3 text-center transition ${selected ? "border-wine bg-wine/5 ring-1 ring-wine" : "border-line hover:border-ink/40"}`}
-    >
+    <div onClick={onClick} className={`cursor-pointer rounded border p-3 text-center transition ${selected ? "border-wine bg-wine/5 ring-1 ring-wine" : "border-line hover:border-ink/40"}`}>
       <img src={product.foto} alt={product.nome} className="mx-auto h-28 w-auto" />
       <p className="mt-2 text-[13px] font-medium text-ink">{product.nome}</p>
       <p className="text-[11px] text-stone">{product.tecido} · {product.modelagem}</p>
@@ -147,16 +207,13 @@ function SizeSelect({ product, value, onChange }) {
 
 function SlotSingle({ slot, value, filtroFn, onChange }) {
   const produtos = filtroFn(slot.produtos);
-  // se houver só 1 peça possível no slot inteiro, já vem selecionada (sem ambiguidade)
   const unico = slot.produtos.length === 1 ? slot.produtos[0] : null;
   const selId = value.productId || (unico ? unico.id : null);
   return (
     <Card>
       <h3 className="mb-1 font-serif text-lg font-semibold">{slot.label}</h3>
       <p className="mb-3 text-[12px] text-stone">Escolha o corte pela imagem.</p>
-      {produtos.length === 0 ? (
-        <p className="text-[13px] text-wine">Nenhuma peça nesse filtro.</p>
-      ) : (
+      {produtos.length === 0 ? <p className="text-[13px] text-wine">Nenhuma peça nesse filtro.</p> : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {produtos.map((p) => {
             const sel = selId === p.id;
@@ -187,7 +244,7 @@ function SlotMulti({ slot, value, filtroFn, onPick }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {produtos.map((p) => {
           const pick = picks[p.id] || { qtd: 0, tamanho: "" };
-          const podeMais = restante > 0; // ainda cabe ao menos 1
+          const podeMais = restante > 0;
           return (
             <PieceCard key={p.id} product={p} selected={pick.qtd > 0}>
               <div className="mt-2 flex items-center justify-center gap-3" onClick={(e) => e.stopPropagation()}>

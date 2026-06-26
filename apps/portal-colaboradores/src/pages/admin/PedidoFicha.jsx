@@ -60,7 +60,7 @@ export default function PedidoFicha() {
         </div>
 
         <div className="mt-4 rounded border border-line bg-cream/60 px-3 py-2 text-[13px]">
-          <p className="text-[10px] uppercase tracking-wide text-stone">Entrega (Correios) — endereço do colaborador</p>
+          <p className="text-[10px] uppercase tracking-wide text-stone">Entrega · {r0.ENTREGA}</p>
           <p className="font-medium text-ink">{r0.ENDERECO || "— endereço não informado —"}</p>
         </div>
 

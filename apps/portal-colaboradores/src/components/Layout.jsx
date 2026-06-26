@@ -15,6 +15,7 @@ const STAFF = [
   { to: "/admin/colaboradores", label: "Colaboradores" },
   { to: "/admin/cargos", label: "Cargos & Kits" },
   { to: "/admin/pedidos", label: "Pedidos" },
+  { to: "/admin/faturamento", label: "Faturamento" },
 ];
 
 export default function Layout() {
