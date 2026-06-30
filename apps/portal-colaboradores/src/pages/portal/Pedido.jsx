@@ -1,24 +1,23 @@
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { Minus, Plus, Home, Building2 } from "lucide-react";
-import { Button, Card, Field, PageTitle, Modal, StatusPill } from "../../components/ui";
+import { Minus, Plus } from "lucide-react";
+import { Button, Card, Field, PageTitle, Modal } from "../../components/ui";
 import { currentProfile } from "../../lib/auth";
 import { orderService } from "../../lib/services";
-import { POSITIONS, KITS, productById, STOCK, UNIDADES, BORDADO_INFO } from "../../data/seed";
-import { bordadoNome } from "../../lib/normalize";
+import { POSITIONS, KITS, productById, STOCK, BORDADO_INFO } from "../../data/seed";
+import { bordadoOpcoes, BORDADO_MAX } from "../../lib/normalize";
 import { enderecoLinha } from "../../lib/validators";
 
 const posByCode = Object.fromEntries(POSITIONS.map((p) => [p.codigo, p]));
-const unidadeNome = Object.fromEntries(UNIDADES.map((u) => [u.codigo, `${u.nome} (${u.uf})`]));
 const MODEL = [["todas", "Todas"], ["fem", "Feminina"], ["masc", "Masculina"], ["uni", "Unissex"]];
 
 export default function Pedido() {
   const nav = useNavigate();
   const profile = currentProfile();
   const kit = KITS[posByCode[profile.position]?.kit];
+  const opcoesBordado = bordadoOpcoes(profile.nome);
   const [form, setForm] = useState({});
-  const [entregaTipo, setEntregaTipo] = useState("casa"); // casa | unidade
-  const [unidade, setUnidade] = useState(profile.unidade || "AEMO");
+  const [bordado, setBordado] = useState(opcoesBordado[0] || "");
   const [filtro, setFiltro] = useState("todas");
   const [erro, setErro] = useState("");
   const [review, setReview] = useState(null); // resumo p/ confirmação
@@ -27,7 +26,13 @@ export default function Pedido() {
   if (!kit) return <Navigate to="/portal" replace />;
   if (orderService.jaPediu(profile.id)) return <Navigate to="/portal/meus-pedidos" replace />;
 
-  const slots = kit.slots.map((s) => ({ ...s, produtos: s.produtos.map((id) => productById[id]) }));
+  // exceção por colaborador: regras.kit_qtd sobrepõe a quantidade do kit (ex.: médico = 1 jaleco)
+  const kitQtd = profile.regras?.kit_qtd;
+  const slots = kit.slots.map((s) => ({
+    ...s,
+    max: s.modo === "multi" && kitQtd != null ? kitQtd : s.max,
+    produtos: s.produtos.map((id) => productById[id]),
+  }));
   const temFiltro = slots.some((s) => new Set(s.produtos.map((p) => p.genero)).size > 1);
   const aplicaFiltro = (ps) => (filtro === "todas" ? ps : ps.filter((p) => p.genero === filtro));
   const setSingle = (i, patch) => setForm((f) => ({ ...f, [i]: { ...f[i], ...patch } }));
@@ -37,7 +42,7 @@ export default function Pedido() {
   // valida + monta os itens; abre a tela de confirmação
   function revisar() {
     setErro("");
-    if (entregaTipo === "casa" && !profile.endereco) return setErro("Cadastre um endereço em “Minha conta” ou escolha uma unidade.");
+    if (!profile.endereco) return setErro("Cadastre o endereço de entrega em “Minha conta” antes de pedir.");
     const items = [];
     for (let i = 0; i < slots.length; i++) {
       const slot = slots[i]; const v = form[i] || {};
@@ -60,7 +65,7 @@ export default function Pedido() {
     const preview = items.map((it) => ({
       ...it, nome: productById[it.productId]?.nome,
       sobMedida: (STOCK[it.productId]?.[it.tamanho] ?? 0) < it.qtd,
-      bordado: kit.bordado ? bordadoNome(profile.nome) : null,
+      bordado: kit.bordado ? bordado : null,
     }));
     setReview({ items, preview });
   }
@@ -68,16 +73,14 @@ export default function Pedido() {
   async function confirmar() {
     setBusy(true);
     try {
-      const order = await orderService.create({ profileId: profile.id, unidade, items: review.items, entregaTipo });
+      const order = await orderService.create({ profileId: profile.id, unidade: profile.unidade, items: review.items, entregaTipo: "casa", bordado: kit.bordado ? bordado : null });
       nav("/portal/meus-pedidos", { state: { novo: order.numero } });
     } catch {
       setBusy(false); setReview(null); setErro("Não foi possível registrar o pedido. Tente novamente.");
     }
   }
 
-  const destinoTexto = entregaTipo === "casa"
-    ? (profile.endereco ? enderecoLinha(profile.endereco) : "—")
-    : (unidadeNome[unidade] || unidade);
+  const destinoTexto = profile.endereco ? enderecoLinha(profile.endereco) : "—";
 
   return (
     <div>
@@ -108,29 +111,21 @@ export default function Pedido() {
 
         <div className="space-y-4">
           <Card>
-            <h3 className="mb-3 font-serif text-lg font-semibold">Entrega</h3>
-            <div className="space-y-2">
-              <DestinoOpcao ativo={entregaTipo === "casa"} onClick={() => setEntregaTipo("casa")} icon={Home}
-                titulo="Meu endereço (recomendado)" sub={profile.endereco ? enderecoLinha(profile.endereco) : "nenhum endereço cadastrado"} />
-              <DestinoOpcao ativo={entregaTipo === "unidade"} onClick={() => setEntregaTipo("unidade")} icon={Building2}
-                titulo="Retirar em uma unidade Einstein" sub="entrega na unidade do hospital">
-                {entregaTipo === "unidade" && (
-                  <select className="input mt-2" value={unidade} onChange={(e) => setUnidade(e.target.value)} onClick={(e) => e.stopPropagation()}>
-                    {UNIDADES.map((u) => <option key={u.codigo} value={u.codigo}>{u.nome} ({u.uf})</option>)}
-                  </select>
-                )}
-              </DestinoOpcao>
-              {entregaTipo === "casa" && (
-                <p className="text-[11px] text-stone">Endereço errado? Ajuste em <a href="/portal/conta" className="text-wine underline">Minha conta</a> antes de pedir.</p>
-              )}
-            </div>
+            <h3 className="mb-2 font-serif text-lg font-semibold">Entrega</h3>
+            <p className="text-[10px] uppercase tracking-wide text-stone">Endereço cadastrado</p>
+            <p className="text-[13px] font-medium text-ink">{profile.endereco ? enderecoLinha(profile.endereco) : "nenhum endereço cadastrado"}</p>
+            <p className="mt-2 text-[11px] text-stone">Endereço errado? Ajuste em <a href="/portal/conta" className="text-wine underline">Minha conta</a> antes de pedir.</p>
           </Card>
 
           {kit.bordado && (
             <Card>
               <h3 className="mb-2 font-serif text-lg font-semibold">Bordado do nome</h3>
-              <p className="rounded border border-line bg-cream px-3 py-2 text-center text-[16px] font-medium tracking-wide">{bordadoNome(profile.nome)}</p>
-              <p className="mt-2 text-[11px] leading-relaxed text-stone">{BORDADO_INFO}</p>
+              <p className="mb-1 text-[11px] text-stone">Escolha como o nome vai bordado (máx. {BORDADO_MAX} letras):</p>
+              <select className="input" value={bordado} onChange={(e) => setBordado(e.target.value)}>
+                {opcoesBordado.map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+              <p className="mt-1 text-right text-[10px] text-stone">{bordado.length}/{BORDADO_MAX}</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-stone">{BORDADO_INFO}</p>
             </Card>
           )}
 
@@ -160,24 +155,6 @@ export default function Pedido() {
           </div>
         )}
       </Modal>
-    </div>
-  );
-}
-
-function DestinoOpcao({ ativo, onClick, icon: Icon, titulo, sub, children }) {
-  return (
-    <div onClick={onClick} className={`cursor-pointer rounded border p-3 transition ${ativo ? "border-wine bg-wine/5 ring-1 ring-wine" : "border-line hover:border-ink/40"}`}>
-      <div className="flex items-start gap-2">
-        <span className={`mt-0.5 grid h-4 w-4 place-items-center rounded-full border ${ativo ? "border-wine" : "border-stone"}`}>
-          {ativo && <span className="h-2 w-2 rounded-full bg-wine" />}
-        </span>
-        <Icon size={16} className="mt-0.5 text-ink-soft" />
-        <div className="flex-1">
-          <p className="text-[13px] font-medium text-ink">{titulo}</p>
-          <p className="text-[11px] text-stone">{sub}</p>
-          {children}
-        </div>
-      </div>
     </div>
   );
 }

@@ -18,6 +18,7 @@ function mapProfile(r) {
     id: r.id, cpf: r.cpf, nome: r.nome, email: r.email, telefone: r.telefone,
     whatsappOptin: r.whatsapp_optin, status: r.status, ativado: r.ativado,
     endereco: r.endereco, unidade: r.unidade_codigo, cargoTxt: r.cargo_txt,
+    regras: r.regras || {},
     position: r.positions?.codigo || null,
   };
 }
@@ -89,9 +90,16 @@ async function loadColaborador(profileId, tenantId) {
 }
 
 // ---------- AUTH ----------
-export async function loginEmail(email, senha) {
-  const { error } = await supabase.auth.signInWithPassword({ email: (email || "").trim().toLowerCase(), password: senha });
-  if (error) return { ok: false, reason: "senha_invalida" };
+export async function loginEmail(loginId, senha) {
+  let email = (loginId || "").trim();
+  if (!email.includes("@")) {
+    // login por CPF → resolve o e-mail da conta ativada
+    const { data, error } = await supabase.functions.invoke("resolver-login", { body: { cpf: email } });
+    if (error || !data?.ok) return { ok: false, reason: "credenciais" };
+    email = data.email;
+  }
+  const { error } = await supabase.auth.signInWithPassword({ email: email.toLowerCase(), password: senha });
+  if (error) return { ok: false, reason: "credenciais" };
   await bootstrap();
   return { ok: true };
 }
@@ -121,23 +129,23 @@ export async function logout() {
 }
 
 // ---------- PEDIDOS ----------
-function buildItems(profile, kit, items) {
+function buildItems(profile, kit, items, bordado) {
   return items.map((it) => {
     const saldo = STOCK[it.productId]?.[it.tamanho] ?? 0;
     const sobMedida = saldo < (it.qtd || 1);
     return {
       product_sku: it.productId, product_nome: productById[it.productId]?.nome,
       tecido: productById[it.productId]?.tecido, tamanho: it.tamanho, qtd: it.qtd || 1,
-      sob_medida: sobMedida, bordado_nome: kit?.bordado ? bordadoNome(profile.nome) : null,
+      sob_medida: sobMedida, bordado_nome: kit?.bordado ? (bordado || bordadoNome(profile.nome)) : null,
     };
   });
 }
 
-export async function orderCreate({ profileId, unidade, items, entregaTipo = "casa" }) {
+export async function orderCreate({ profileId, unidade, items, entregaTipo = "casa", bordado = null }) {
   const st = getState();
   const profile = st.profiles.find((p) => p.id === profileId);
   const kit = KITS[posByCode[profile.position]?.kit];
-  const built = buildItems(profile, kit, items);
+  const built = buildItems(profile, kit, items, bordado);
 
   const { data: order, error } = await ped().from("orders").insert({
     tenant_id: st.session.tenantId, profile_id: profileId,
@@ -184,6 +192,11 @@ export async function liberar(profileId) {
   await bootstrap();
 }
 
+export async function setRegras(profileId, regras) {
+  await ident().from("profiles").update({ regras }).eq("id", profileId);
+  await bootstrap();
+}
+
 export async function runImport(rows, fonte = "app") {
   const st = getState();
   const { error } = await supabase.functions.invoke("importar-cadastro", { body: { tenant_id: st.session.tenantId, fonte, rows } });
@@ -223,7 +236,9 @@ export async function saveConfig(patch) {
   setState((s) => ({ ...s, config: merged }));
 }
 
-// pedido já existe? (bloqueio de re-pedido)
+// pedido já existe? (bloqueio de re-pedido) — exceção: regras.repedido libera novo pedido
 export function jaPediu(profileId) {
+  const p = getState().profiles.find((x) => x.id === profileId);
+  if (p?.regras?.repedido) return false;
   return getState().orders.some((o) => o.profileId === profileId && o.status !== "cancelado");
 }

@@ -66,8 +66,8 @@ function FormLogin({ irPrimeiroAcesso }) {
   return (
     <form onSubmit={entrar} className="space-y-4">
       <h1 className="font-serif text-xl font-semibold">Entrar</h1>
-      <Field label="Login" hint={supabaseEnabled ? "seu e-mail" : "seu e-mail ou CPF"}>
-        <input className="input" value={loginId} onChange={(e) => setLoginId(e.target.value)} placeholder={supabaseEnabled ? "voce@exemplo.com" : "e-mail ou CPF"} autoFocus />
+      <Field label="Login" hint="seu e-mail ou CPF">
+        <input className="input" value={loginId} onChange={(e) => setLoginId(e.target.value)} placeholder="e-mail ou CPF" autoFocus />
       </Field>
       <Field label="Senha">
         <input type="password" className="input" value={senha} onChange={(e) => setSenha(e.target.value)} placeholder="sua senha" />

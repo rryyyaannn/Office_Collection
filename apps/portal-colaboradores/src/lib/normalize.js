@@ -46,11 +46,24 @@ function validaCPF(c) {
   return calc(9) === +c[9] && calc(10) === +c[10];
 }
 
-// nome de bordado (padrão Einstein): PRIMEIRO nome + ÚLTIMO sobrenome, conforme cadastro.
-// Sem título e sem especialidade. Nome social é tratado por fora (via WhatsApp do pedido).
+// Bordado do jaleco médico — LIMITE RÍGIDO de 14 caracteres (padrão Einstein/bordadeira).
+// Gera opções que CABEM (≤14): com/sem Dr./Dra., nome+sobrenome, só nome, nome do meio…
+// A pessoa escolhe na hora do pedido (poka-yoke: não dá para passar de 14 nem errar).
+export const BORDADO_MAX = 14;
+export function bordadoOpcoes(nome) {
+  const p = (nome || "").trim().split(/\s+/).filter(Boolean);
+  const pr = p[0] || "", ul = p.length > 1 ? p[p.length - 1] : "", meio = p.length > 2 ? p[1] : "";
+  const cands = [
+    `Dr. ${pr} ${ul}`, `Dra. ${pr} ${ul}`,
+    `${pr} ${ul}`,
+    `Dr. ${pr} ${meio}`, `Dra. ${pr} ${meio}`,
+    `Dr. ${pr}`, `Dra. ${pr}`,
+    pr,
+  ].map((s) => s.replace(/\s+/g, " ").trim());
+  const ok = [...new Set(cands)].filter((s) => s && s.length <= BORDADO_MAX);
+  return ok.length ? ok : [pr.slice(0, BORDADO_MAX)];
+}
+// default (primeira opção que cabe) — usado quando não há escolha explícita.
 export function bordadoNome(nome) {
-  const partes = (nome || "").trim().split(/\s+/).filter(Boolean);
-  if (partes.length === 0) return "";
-  const base = partes.length === 1 ? partes[0] : `${partes[0]} ${partes[partes.length - 1]}`;
-  return base.slice(0, 26);
+  return bordadoOpcoes(nome)[0] || "";
 }

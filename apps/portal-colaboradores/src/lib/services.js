@@ -55,8 +55,8 @@ export const notificationService = {
 // ---------- PEDIDOS ----------
 export const orderService = {
   // items: [{ productId, tamanho, qtd, tecido }]
-  create({ profileId, unidade, items, entregaTipo }) {
-    if (supabaseEnabled) return db.orderCreate({ profileId, unidade, items, entregaTipo });
+  create({ profileId, unidade, items, entregaTipo, bordado }) {
+    if (supabaseEnabled) return db.orderCreate({ profileId, unidade, items, entregaTipo, bordado });
     const profile = getState().profiles.find((p) => p.id === profileId);
     const kit = KITS[posByCode[profile.position]?.kit];
     const built = items.map((it) => {
@@ -65,7 +65,7 @@ export const orderService = {
       return {
         productId: it.productId, kitId: kit?.id, tamanho: it.tamanho, qtd: it.qtd || 1,
         tecido: productById[it.productId]?.tecido, sobMedida,
-        bordadoNome: kit?.bordado ? bordadoNome(profile.nome) : null,
+        bordadoNome: kit?.bordado ? (bordado || bordadoNome(profile.nome)) : null,
       };
     });
     const order = {
@@ -122,8 +122,10 @@ export const orderService = {
       }),
     }));
   },
-  // bloqueio de re-pedido: já existe pedido não-cancelado para o colaborador?
+  // bloqueio de re-pedido (exceção: regras.repedido libera novo pedido)
   jaPediu(profileId) {
+    const p = getState().profiles.find((x) => x.id === profileId);
+    if (p?.regras?.repedido) return false;
     return getState().orders.some((o) => o.profileId === profileId && o.status !== "cancelado");
   },
 };
@@ -160,9 +162,18 @@ export const adminService = {
     }));
   },
   bloquear(profileId) {
+    if (supabaseEnabled) return db.bloquear(profileId);
     setState((s) => ({
       ...s,
       profiles: s.profiles.map((p) => (p.id === profileId ? { ...p, status: "aguardando" } : p)),
+    }));
+  },
+  // exceções por colaborador: { kit_qtd, repedido }
+  setRegras(profileId, regras) {
+    if (supabaseEnabled) return db.setRegras(profileId, regras);
+    setState((s) => ({
+      ...s,
+      profiles: s.profiles.map((p) => (p.id === profileId ? { ...p, regras } : p)),
     }));
   },
 };

@@ -55,8 +55,18 @@ CLAUDE.md    # este arquivo
 | 0007 | **Ambientes e dados**: separar dev/staging/prod; **NUNCA usar dados de produção em dev**; RLS multi-tenant desde o dia 1; migrations-as-code |
 | 0008 | **`supabase/` NÃO versionado** (decisão do Ryan, jun/2026): migrations/seed/functions + segredos ficam **locais** (`.gitignore /supabase/`). Segredos só em `supabase/.env`. Tradeoff: sem histórico no git — avaliar repo **privado** só p/ o SQL depois |
 
+### Reunião 28/jun/2026 — decisões aplicadas (resumo em `docs/resumo-semanal/`)
+- **Entrega SEMPRE no endereço** do colaborador → removida a opção "retirar na unidade" no pedido
+  (a unidade Morumbi entra só no fluxo de **devolução**, 🔜 a fazer).
+- **Bordado: limite RÍGIDO de 14 caracteres** + opções prontas (`bordadoOpcoes`) — a pessoa escolhe,
+  não digita. Confirmar com a Fernanda se leva "Dr./Dra." (perg. #1).
+- **Login por CPF ou e-mail** (Edge Function `resolver-login` resolve CPF→e-mail). ✅
+- Regras de kit **médico=2 / residente=1** confirmadas (já implementadas).
+- 🔜 **Devolução → retirada no Morumbi + notificação**; integrações **Correios/WhatsApp/ERP**;
+  importação automática via **Make** (acesso à planilha liberado p/ o gmail do Ryan).
+
 ### Confirmações do Einstein (jun/2026) — impactam o desenho
-- **Entrega**: normalmente na **casa do colaborador**; **eventualmente** numa unidade do Einstein → pedido tem **destino selecionável** (casa/unidade).
+- **Entrega**: ~~casa/unidade~~ → **sempre na casa** (revisto na reunião de 28/jun; unidade só p/ devolução).
 - **Quantidade do kit**: regra é **kit completo**, mas há **exceções liberadas** (ex.: médico levar 1 jaleco) → **Office precisa de autonomia**: **Painel ADM configurável** (quantidade/regra por cargo e exceção por colaborador). *Requisito reforçado 2x.*
 - **Planilha morre**: ela só compilava cliente+pedido+Correios para **emitir a NF no fim do mês** → nosso sistema gera o **registro + fechamento/faturamento mensal** (substitui a planilha). Confirma ADR-0005.
 - **Organiza Têxtil**: integração com **e-commerce NÃO estava no escopo inicial** — precisa acordar com eles → **não depender** do ERP agora; nosso **registro/output é a fonte de verdade**; integração fica opcional/posterior (ADR-0003 segue, mas sem bloquear).
