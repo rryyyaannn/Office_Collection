@@ -14,6 +14,14 @@ export const UNIDADES = [
   { codigo: "AEOR", nome: "Unidade Goiânia", uf: "GO" },
 ];
 
+// Ponto de retirada quando um pedido é devolvido (não entregue no endereço).
+// ⚠️ confirmar o endereço exato com a Office.
+export const RETIRADA_MORUMBI = {
+  codigo: "AEMO",
+  nome: "Unidade Morumbi",
+  endereco: "Av. Albert Einstein, 627 — Morumbi, São Paulo/SP",
+};
+
 export const POSITIONS = [
   { codigo: "atendimento", nome: "Assistente de Atendimento", kit: "k_atend" },
   { codigo: "medico", nome: "Médico", kit: "k_medico" },

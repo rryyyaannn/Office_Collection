@@ -45,6 +45,7 @@ const STATUS = {
   em_producao: ["Em produção", "bg-warn/10 text-warn"],
   despachado: ["Despachado", "bg-navy/10 text-navy"],
   entregue: ["Entregue", "bg-ok/10 text-ok"],
+  devolvido: ["Devolvido · retirar Morumbi", "bg-wine/10 text-wine"],
   cancelado: ["Cancelado", "bg-stone/15 text-stone"],
   liberado: ["Liberado", "bg-ok/10 text-ok"],
   aguardando: ["Aguardando Office", "bg-warn/10 text-warn"],

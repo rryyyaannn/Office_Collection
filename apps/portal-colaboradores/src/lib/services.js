@@ -5,7 +5,7 @@ import { normCPF, matchPosition, bordadoNome, normCargoText } from "./normalize"
 import { enderecoLinha } from "./validators";
 import { supabaseEnabled } from "./supabase";
 import * as db from "./db";
-import { TENANT, UNIDADES, POSITIONS, KITS, productById, STOCK } from "../data/seed";
+import { TENANT, UNIDADES, POSITIONS, KITS, productById, STOCK, RETIRADA_MORUMBI } from "../data/seed";
 
 const STATUS_LIBERADO = /liberad|ativo|sim|ok/i;
 const posByCode = Object.fromEntries(POSITIONS.map((p) => [p.codigo, p]));
@@ -106,6 +106,17 @@ export const orderService = {
       notificationService.send(o.profileId, "entregue",
         `Seu pedido ${o.numero} foi entregue. 💜 Obrigado! Responda a pesquisa de satisfação quando puder.`);
     return o;
+  },
+  // devolução: pedido voltou → retirada no Morumbi + aviso
+  devolver(orderId) {
+    if (supabaseEnabled) return db.orderDevolver(orderId);
+    const o = getState().orders.find((x) => x.id === orderId);
+    setState((s) => ({
+      ...s,
+      orders: s.orders.map((x) => (x.id === orderId ? { ...x, status: "devolvido", entregaTipo: "unidade", unidade: RETIRADA_MORUMBI.codigo } : x)),
+    }));
+    if (o) notificationService.send(o.profileId, "devolvido",
+      `Seu pedido ${o.numero} não pôde ser entregue e retornou. Retire na ${RETIRADA_MORUMBI.nome} — ${RETIRADA_MORUMBI.endereco}. Leve um documento com foto.`);
   },
   // volta um passo no fluxo (correção). Limpa rastreio se sair de "despachado".
   revert(orderId) {

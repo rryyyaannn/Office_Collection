@@ -3,7 +3,7 @@
 // para não reescrever a UI. Catálogo segue estático (seed.js). RLS isola por sessão.
 import { supabase } from "./supabase";
 import { setState, getState, uid } from "./store";
-import { KITS, POSITIONS, productById, STOCK, DEFAULT_CONFIG } from "../data/seed";
+import { KITS, POSITIONS, productById, STOCK, DEFAULT_CONFIG, RETIRADA_MORUMBI } from "../data/seed";
 import { bordadoNome, normCargoText, normCPF, matchPosition } from "./normalize";
 
 const posByCode = Object.fromEntries(POSITIONS.map((p) => [p.codigo, p]));
@@ -175,6 +175,19 @@ export async function orderAdvance(orderId, rastreioInformado) {
     await integ().from("notifications").insert({ tenant_id: st.session.tenantId, profile_id: cur.profileId, template: "despachado", payload: { texto: `Seu pedido ${cur.numero} foi despachado! Rastreio Correios: ${patch.rastreio}.` }, status: "mock" });
   if (next === "entregue")
     await integ().from("notifications").insert({ tenant_id: st.session.tenantId, profile_id: cur.profileId, template: "entregue", payload: { texto: `Seu pedido ${cur.numero} foi entregue. 💜 Responda a pesquisa de satisfação quando puder.` }, status: "mock" });
+  await bootstrap();
+}
+
+// Devolução: pedido voltou (não entregue) → retirada na Unidade Morumbi + aviso.
+export async function orderDevolver(orderId) {
+  const st = getState();
+  const cur = st.orders.find((o) => o.id === orderId);
+  await ped().from("orders").update({ status: "devolvido", entrega_tipo: "unidade", unidade_codigo: RETIRADA_MORUMBI.codigo }).eq("id", orderId);
+  await integ().from("notifications").insert({
+    tenant_id: st.session.tenantId, profile_id: cur.profileId, canal: "whatsapp", template: "devolvido",
+    payload: { texto: `Seu pedido ${cur.numero} não pôde ser entregue e retornou. Retire na ${RETIRADA_MORUMBI.nome} — ${RETIRADA_MORUMBI.endereco}. Leve um documento com foto.` },
+    status: "mock",
+  });
   await bootstrap();
 }
 

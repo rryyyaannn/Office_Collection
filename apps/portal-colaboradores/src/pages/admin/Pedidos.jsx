@@ -5,10 +5,10 @@ import { useStore } from "../../lib/store";
 import { orderService } from "../../lib/services";
 
 const SEQ = ["recebido", "em_separacao", "despachado", "entregue"];
-const LABEL = { recebido: "Iniciar separação", em_separacao: "Despachar", despachado: "Marcar entregue" };
-const NOME = { recebido: "Recebido", em_separacao: "Em separação", despachado: "Despachado", entregue: "Entregue" };
-const proximo = (st) => SEQ[Math.min(SEQ.indexOf(st) + 1, SEQ.length - 1)];
-const anterior = (st) => SEQ[Math.max(SEQ.indexOf(st) - 1, 0)];
+const LABEL = { recebido: "Iniciar separação", em_separacao: "Despachar", despachado: "Marcar entregue", devolvido: "Confirmar retirada" };
+const NOME = { recebido: "Recebido", em_separacao: "Em separação", despachado: "Despachado", entregue: "Entregue", devolvido: "Devolvido" };
+const proximo = (st) => (st === "devolvido" ? "entregue" : SEQ[Math.min(SEQ.indexOf(st) + 1, SEQ.length - 1)]);
+const anterior = (st) => (st === "devolvido" ? "despachado" : SEQ[Math.max(SEQ.indexOf(st) - 1, 0)]);
 
 export default function Pedidos() {
   const orders = useStore((s) => s.orders);
@@ -24,8 +24,17 @@ export default function Pedidos() {
     if (next === "despachado") { setRastreio(""); setDespacho(o); return; }
     const texto = next === "em_separacao"
       ? "O pedido vai para SEPARAÇÃO. O colaborador não é notificado nesta etapa."
+      : o.status === "devolvido"
+      ? "Confirma a RETIRADA na Unidade Morumbi? Marca o pedido como ENTREGUE."
       : "Marca como ENTREGUE e dispara o WhatsApp de entrega + pesquisa de satisfação.";
     setConfirm({ titulo: `${o.numero}: ${LABEL[o.status]}`, texto, run: () => orderService.advance(o.id) });
+  }
+  function devolver(o) {
+    setConfirm({
+      titulo: `${o.numero}: registrar devolução`,
+      texto: "Registra que o pedido VOLTOU (não entregue no endereço). A retirada passa para a Unidade Morumbi e o colaborador é avisado por WhatsApp.",
+      run: () => orderService.devolver(o.id),
+    });
   }
   function voltar(o) {
     const prev = anterior(o.status);
@@ -67,6 +76,9 @@ export default function Pedidos() {
                       )}
                       {o.status !== "entregue" && (
                         <button onClick={() => avancar(o)} className="text-[12px] font-semibold uppercase tracking-wide text-navy hover:underline">{LABEL[o.status]} →</button>
+                      )}
+                      {o.status === "despachado" && (
+                        <button onClick={() => devolver(o)} className="text-[12px] font-semibold uppercase tracking-wide text-wine hover:underline">Devolução</button>
                       )}
                       <Link to={`/admin/pedido/${o.id}`} className="text-[12px] font-semibold uppercase tracking-wide text-wine hover:underline">Ficha</Link>
                     </div>

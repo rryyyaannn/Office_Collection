@@ -3,7 +3,7 @@ import { CheckCircle2, MessageCircle } from "lucide-react";
 import { Card, PageTitle, StatusPill } from "../../components/ui";
 import { currentProfile } from "../../lib/auth";
 import { useStore } from "../../lib/store";
-import { productById, WHATSAPP_PEDIDOS } from "../../data/seed";
+import { productById, WHATSAPP_PEDIDOS, RETIRADA_MORUMBI } from "../../data/seed";
 
 export default function MeusPedidos() {
   const profile = currentProfile();
@@ -54,6 +54,11 @@ export default function MeusPedidos() {
                 ))}
               </ul>
               {o.rastreio && <p className="mt-3 text-[13px] text-navy">Rastreio Correios: <strong>{o.rastreio}</strong></p>}
+              {o.status === "devolvido" && (
+                <p className="mt-3 rounded border border-wine/30 bg-wine/5 p-3 text-[12.5px] text-wine">
+                  Não foi possível entregar no seu endereço e o pedido retornou. <strong>Retire na {RETIRADA_MORUMBI.nome}</strong> — {RETIRADA_MORUMBI.endereco}. Leve um documento com foto.
+                </p>
+              )}
               {o.status === "entregue" && (
                 <p className="mt-2 text-[12px] text-stone">Pedido entregue — novo pedido bloqueado até o próximo ciclo.</p>
               )}
