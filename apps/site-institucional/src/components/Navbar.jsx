@@ -7,6 +7,7 @@ import {
   ChevronDown,
   Menu,
   X,
+  LogIn,
   Instagram,
   Facebook,
   Linkedin,
@@ -96,6 +97,12 @@ export default function Navbar() {
             <Logo size={scrolled ? "sm" : "md"} className="shrink-0 transition-all" />
 
             <div className="flex flex-1 items-center justify-end gap-4 text-ink sm:gap-5">
+              <Link
+                to="/acesso"
+                className="hidden items-center gap-1.5 rounded-btn border border-wine/60 px-3.5 py-1.5 text-[12px] font-semibold uppercase tracking-wide2 text-wine transition-colors hover:bg-wine hover:text-white sm:inline-flex"
+              >
+                <LogIn size={14} strokeWidth={1.8} /> {t.nav.acesso}
+              </Link>
               <div className="hidden items-center gap-1 text-[11px] font-semibold tracking-wide2 md:flex">
                 {langs.map((l, i) => (
                   <span key={l} className="flex items-center">
@@ -182,6 +189,13 @@ export default function Navbar() {
           </div>
 
           <nav className="px-6 py-6">
+            <Link
+              to="/acesso"
+              onClick={() => setMobileOpen(false)}
+              className="mb-5 flex items-center justify-center gap-2 rounded-btn bg-wine px-4 py-3 text-[13px] font-semibold uppercase tracking-wide2 text-white"
+            >
+              <LogIn size={16} strokeWidth={1.8} /> {t.nav.acesso}
+            </Link>
             <ul className="space-y-1">
               {LINKS.map((link) => (
                 <li key={link.key}>

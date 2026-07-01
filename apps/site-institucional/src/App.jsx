@@ -12,6 +12,7 @@ import BlogIndex from "./pages/BlogIndex";
 import Article from "./pages/Article";
 import Checkout from "./pages/Checkout";
 import Account from "./pages/Account";
+import Acesso from "./pages/Acesso";
 
 /** Rola ao topo a cada troca de rota (respeita âncoras #secao na home). */
 function ScrollManager() {
@@ -44,6 +45,7 @@ export default function App() {
           <Route path="/blog/:slug" element={<Article />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/conta" element={<Account />} />
+          <Route path="/acesso" element={<Acesso />} />
         </Routes>
       </main>
       <Footer />

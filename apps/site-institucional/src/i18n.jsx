@@ -16,6 +16,7 @@ const STRINGS = {
       blog: "Blog",
       bySegment: "Por segmento",
       clientArea: "Área do cliente",
+      acesso: "Acesso",
       search: "Buscar",
       bag: "Sacola",
       prod: {
@@ -325,6 +326,7 @@ const STRINGS = {
       blog: "Blog",
       bySegment: "By segment",
       clientArea: "Client area",
+      acesso: "Access",
       search: "Search",
       bag: "Bag",
       prod: {
@@ -634,6 +636,7 @@ const STRINGS = {
       blog: "Blog",
       bySegment: "Por segmento",
       clientArea: "Área del cliente",
+      acesso: "Acceso",
       search: "Buscar",
       bag: "Bolsa",
       prod: {
