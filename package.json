@@ -1,0 +1,15 @@
+{
+  "name": "office-collection",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Monorepo Office Collection — landing (site) + portal de colaboradores, um deploy só.",
+  "scripts": {
+    "dev": "concurrently -n site,portal -c blue,magenta \"npm --prefix apps/site-institucional run dev\" \"npm --prefix apps/portal-colaboradores run dev\"",
+    "dev:site": "npm --prefix apps/site-institucional run dev",
+    "dev:portal": "npm --prefix apps/portal-colaboradores run dev",
+    "build": "npm --prefix apps/site-institucional install && npm --prefix apps/site-institucional run build && npm --prefix apps/portal-colaboradores install && npm --prefix apps/portal-colaboradores run build && rm -rf dist && cp -r apps/site-institucional/dist dist && cp -r apps/portal-colaboradores/dist dist/portal"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

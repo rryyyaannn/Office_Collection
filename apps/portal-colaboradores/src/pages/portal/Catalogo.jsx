@@ -58,10 +58,10 @@ export default function Catalogo() {
             {jaPediu ? (
               <p className="text-[13px] text-ink-soft">
                 Você já tem um pedido neste ciclo. Acompanhe em{" "}
-                <Link to="/portal/meus-pedidos" className="text-wine underline">Meus pedidos</Link>.
+                <Link to="/loja/meus-pedidos" className="text-wine underline">Meus pedidos</Link>.
               </p>
             ) : (
-              <Button as={Link} to="/portal/pedido">Fazer meu pedido</Button>
+              <Button as={Link} to="/loja/pedido">Fazer meu pedido</Button>
             )}
           </div>
         </Card>

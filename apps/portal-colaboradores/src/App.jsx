@@ -44,10 +44,10 @@ export default function App() {
       <Route path="/" element={<Login />} />
 
       <Route element={<RequireRole role="colaborador"><Layout /></RequireRole>}>
-        <Route path="/portal" element={<Catalogo />} />
-        <Route path="/portal/pedido" element={<Pedido />} />
-        <Route path="/portal/meus-pedidos" element={<MeusPedidos />} />
-        <Route path="/portal/conta" element={<MinhaConta />} />
+        <Route path="/loja" element={<Catalogo />} />
+        <Route path="/loja/pedido" element={<Pedido />} />
+        <Route path="/loja/meus-pedidos" element={<MeusPedidos />} />
+        <Route path="/loja/conta" element={<MinhaConta />} />
       </Route>
 
       <Route element={<RequireRole role="staff"><Layout /></RequireRole>}>

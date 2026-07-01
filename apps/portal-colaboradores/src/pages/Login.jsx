@@ -13,7 +13,7 @@ export default function Login() {
   const nav = useNavigate();
   const [modo, setModo] = useState("login"); // login | lookup | cadastro
   const [lookup, setLookup] = useState(null); // { cpf, nome }
-  if (session) return <Navigate to={session.role === "staff" ? "/admin" : "/portal"} replace />;
+  if (session) return <Navigate to={session.role === "staff" ? "/admin" : "/loja"} replace />;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-cream px-5 py-10">
@@ -141,7 +141,7 @@ function FormCadastro({ lookup, nav, voltar }) {
     setErro(""); setBusy(true);
     const r = await ativarConta(lookup.cpf, { email: email.trim().toLowerCase(), senha, telefone, whatsappOptin, endereco });
     setBusy(false);
-    if (r.ok) return nav("/portal");
+    if (r.ok) return nav("/loja");
     const msgs = { email_em_uso: "Este e-mail já está em uso.", aguardando: "Cadastro aguardando liberação.", ja_ativado: "Conta já ativada — faça login." };
     setErro(msgs[r.reason] || "Não foi possível ativar a conta.");
   }

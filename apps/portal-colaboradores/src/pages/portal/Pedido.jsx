@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, Link } from "react-router-dom";
 import { Minus, Plus } from "lucide-react";
 import { Button, Card, Field, PageTitle, Modal } from "../../components/ui";
 import { currentProfile } from "../../lib/auth";
@@ -23,8 +23,8 @@ export default function Pedido() {
   const [review, setReview] = useState(null); // resumo p/ confirmação
   const [busy, setBusy] = useState(false);
 
-  if (!kit) return <Navigate to="/portal" replace />;
-  if (orderService.jaPediu(profile.id)) return <Navigate to="/portal/meus-pedidos" replace />;
+  if (!kit) return <Navigate to="/loja" replace />;
+  if (orderService.jaPediu(profile.id)) return <Navigate to="/loja/meus-pedidos" replace />;
 
   // exceção por colaborador: regras.kit_qtd sobrepõe a quantidade do kit (ex.: médico = 1 jaleco)
   const kitQtd = profile.regras?.kit_qtd;
@@ -74,7 +74,7 @@ export default function Pedido() {
     setBusy(true);
     try {
       const order = await orderService.create({ profileId: profile.id, unidade: profile.unidade, items: review.items, entregaTipo: "casa", bordado: kit.bordado ? bordado : null });
-      nav("/portal/meus-pedidos", { state: { novo: order.numero } });
+      nav("/loja/meus-pedidos", { state: { novo: order.numero } });
     } catch {
       setBusy(false); setReview(null); setErro("Não foi possível registrar o pedido. Tente novamente.");
     }
@@ -85,7 +85,7 @@ export default function Pedido() {
   return (
     <div>
       <PageTitle eyebrow={kit.nome} title="Fazer pedido">
-        <Button variant="outline" onClick={() => nav("/portal")}>Voltar</Button>
+        <Button variant="outline" onClick={() => nav("/loja")}>Voltar</Button>
       </PageTitle>
 
       {temFiltro && (
@@ -114,7 +114,7 @@ export default function Pedido() {
             <h3 className="mb-2 font-serif text-lg font-semibold">Entrega</h3>
             <p className="text-[10px] uppercase tracking-wide text-stone">Endereço cadastrado</p>
             <p className="text-[13px] font-medium text-ink">{profile.endereco ? enderecoLinha(profile.endereco) : "nenhum endereço cadastrado"}</p>
-            <p className="mt-2 text-[11px] text-stone">Endereço errado? Ajuste em <a href="/portal/conta" className="text-wine underline">Minha conta</a> antes de pedir.</p>
+            <p className="mt-2 text-[11px] text-stone">Endereço errado? Ajuste em <Link to="/loja/conta" className="text-wine underline">Minha conta</Link> antes de pedir.</p>
           </Card>
 
           {kit.bordado && (

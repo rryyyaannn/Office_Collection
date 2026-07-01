@@ -5,9 +5,9 @@ import { useStore } from "../lib/store";
 import { logout, currentProfile } from "../lib/auth";
 
 const COLAB = [
-  { to: "/portal", label: "Catálogo", end: true },
-  { to: "/portal/meus-pedidos", label: "Meus pedidos" },
-  { to: "/portal/conta", label: "Minha conta" },
+  { to: "/loja", label: "Catálogo", end: true },
+  { to: "/loja/meus-pedidos", label: "Meus pedidos" },
+  { to: "/loja/conta", label: "Minha conta" },
 ];
 const STAFF = [
   { to: "/admin", label: "Painel", end: true },
@@ -28,7 +28,7 @@ export default function Layout() {
     <div className="min-h-screen bg-cream">
       <header className="no-print sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3">
-          <Link to={session?.role === "staff" ? "/admin" : "/portal"}><Logo /></Link>
+          <Link to={session?.role === "staff" ? "/admin" : "/loja"}><Logo /></Link>
           <nav className="hidden items-center gap-1 md:flex">
             {links.map((l) => (
               <NavLink

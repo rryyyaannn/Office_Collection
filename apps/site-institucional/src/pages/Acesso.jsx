@@ -3,10 +3,9 @@ import SectionHeading from "../components/SectionHeading";
 import Button from "../components/Button";
 import Reveal from "../components/Reveal";
 
-// URL do portal dos colaboradores (Einstein).
-// TODO: trocar pelo subdomínio definitivo (ex.: https://colaboradores-einstein.officecollection.com.br)
-// e desligar a "Vercel Authentication" do projeto para ficar público.
-const PORTAL_COLAB_URL = "https://office-collection-rryyyaannns-projects.vercel.app";
+// Portal dos colaboradores (Einstein). No deploy unificado ele vive em /portal (mesma origem).
+// Em dev, roda no Vite do portal (porta 5180, base /portal/).
+const PORTAL_COLAB_URL = import.meta.env.DEV ? "http://localhost:5180/portal/" : "/portal";
 
 const PORTAIS = [
   {
