@@ -4,7 +4,7 @@
 import { supabase } from "./supabase";
 import { setState, getState, uid } from "./store";
 import { KITS, POSITIONS, productById, STOCK, DEFAULT_CONFIG } from "../data/seed";
-import { bordadoNome, normCargoText } from "./normalize";
+import { bordadoNome, normCargoText, normCPF, matchPosition } from "./normalize";
 
 const posByCode = Object.fromEntries(POSITIONS.map((p) => [p.codigo, p]));
 const ID = (s) => s; // schema helpers
@@ -197,11 +197,46 @@ export async function setRegras(profileId, regras) {
   await bootstrap();
 }
 
-export async function runImport(rows, fonte = "app") {
+// Import manual do STAFF: grava direto pelo cliente autenticado (RLS staff permite).
+// Sem segredo no front. A mesma normalização (normalize.js) do importador do Make.
+// (O Make usa a Edge Function `importar-cadastro` server-side; aqui é o caminho do painel.)
+export async function runImport(rows, fonte = "manual") {
   const st = getState();
-  const { error } = await supabase.functions.invoke("importar-cadastro", { body: { tenant_id: st.session.tenantId, fonte, rows } });
-  if (error) throw error;
+  const tenantId = st.session.tenantId;
+  const { data: pos } = await ident().from("positions").select("id, codigo").eq("tenant_id", tenantId);
+  const codeToId = Object.fromEntries((pos || []).map((p) => [p.codigo, p.id]));
+  const aliasMap = Object.fromEntries((st.aliases || []).map((a) => [a.alias_norm, a.position]));
+
+  const { data: imp, error: impErr } = await integ().from("imports").insert({ tenant_id: tenantId, fonte, total: rows.length }).select().single();
+  if (impErr) throw impErr;
+
+  let ok = 0, erros = 0;
+  const importRows = [], profilesUpsert = [];
+  for (const raw of rows) {
+    const cpf = normCPF(raw.CPF ?? raw.cpf);
+    const code = matchPosition(raw.CARGO ?? raw.cargo ?? "", aliasMap);
+    if (!cpf || !code) {
+      erros++; importRows.push({ import_id: imp.id, raw, status: "excecao", motivo: !cpf ? "cpf_invalido" : "cargo_desconhecido" });
+      continue;
+    }
+    const liberado = /liberad|ativo|sim|ok/i.test(raw.STATUS ?? raw.status ?? "");
+    const unidadeRaw = String(raw.UNIDADE ?? raw.unidade ?? "");
+    const unidadeCod = (unidadeRaw.match(/\(([A-Za-z]{3,5})\)/)?.[1] ?? "").toUpperCase() || (unidadeRaw || null);
+    profilesUpsert.push({
+      tenant_id: tenantId, cpf, nome: raw.COLABORADOR ?? raw.nome, position_id: codeToId[code],
+      cargo_txt: raw.CARGO ?? raw.cargo ?? null, unidade_codigo: unidadeCod,
+      status: liberado ? "liberado" : "aguardando", origem: "planilha",
+    });
+    ok++; importRows.push({ import_id: imp.id, raw, status: "ok" });
+  }
+  if (profilesUpsert.length) {
+    const { error } = await ident().from("profiles").upsert(profilesUpsert, { onConflict: "tenant_id,cpf" });
+    if (error) throw error;
+  }
+  if (importRows.length) await integ().from("import_rows").insert(importRows);
+  await integ().from("imports").update({ ok, erros }).eq("id", imp.id);
   await bootstrap();
+  return { import_id: imp.id, total: rows.length, ok, erros };
 }
 
 export async function updateConta(profileId, patch) {
