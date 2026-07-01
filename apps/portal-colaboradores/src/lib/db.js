@@ -192,6 +192,11 @@ export async function liberar(profileId) {
   await bootstrap();
 }
 
+export async function bloquear(profileId) {
+  await ident().from("profiles").update({ status: "aguardando" }).eq("id", profileId);
+  await bootstrap();
+}
+
 export async function setRegras(profileId, regras) {
   await ident().from("profiles").update({ regras }).eq("id", profileId);
   await bootstrap();
